@@ -63,3 +63,16 @@ python advection_diffusion_inverse.py
 python tdoa_geolocation.py
 # → opens  http://localhost:8010/tdoa_heatmap.html  with posterior heat-map
 
+# Edit beacon coordinates & compass bearings near the top of the file
+python bayesian_resection.py
+# → opens  http://localhost:8000/observer_heatmap.html  with a posterior heat-map
+
+python advection_diffusion_inverse.py
+# → GUI window:
+#   • move “Injection Site x₀” slider
+#   • enter three (x,t) pairs
+#   • click  Save → Run P(x₀ | D) → Show P(x₀ | D)
+
+# (Optional) replace MIC_POS and D_obs with your own array & delay matrix
+python tdoa_geolocation.py
+# → opens  http://localhost:8010/tdoa_heatmap.html  with a posterior heat-map
