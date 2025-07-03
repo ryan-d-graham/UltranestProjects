@@ -1,61 +1,65 @@
-# Bayesian Inverse Geolocation (Compass Resection)
-
-*Locate your own coordinates when all you have is a compass and a clear view of a few known landmarks.*
-
-This small script demonstrates how to turn noisy bearing observations into a **posterior probability cloud** using Bayesian inference and nested sampling. The result is an interactive heat-map that shows *where you probably are*, rather than a single point estimate.
+# Bayesian Inverse Problems with **UltraNest**  
+*Tiny skeleton projects that turn minimal data into **full posterior distributions** — uncertainty and all.*
 
 ---
 
-## Why it matters
+## 1 · A very small primer on Bayesian inversion  
 
-| Use-case | Why bearings only help |
-| --- | --- |
-| **Search & Rescue** | Find a responder’s location after GPS failure or jamming. |
-| **Field surveying** | Quick ground-truth checks without laying out reflectors or total stations. |
-| **Wild-life / sensor tracking** | Back-solve the position of a tag that can only broadcast heading. |
-| **Backup navigation** | Emergency fixes on land or at sea when every other nav aid fails. |
+Given data **D** and parameters **θ**, Bayesian inference rewrites the inverse problem  
 
-Anywhere you can see at least two landmarks whose coordinates you know, this method can give you an immediate position estimate—together with its uncertainty.
+\[
+\text{“find }\theta\text{ given }D\text{”}
+\]
 
----
+as the *posterior* probability density  
 
-## How the script works (one-minute version)
+\[
+p(\theta \mid D)
+      \;=\;
+      \frac{p(D \mid \theta)\,p(\theta)}
+           {\displaystyle
+            \int p(D \mid \theta)\,p(\theta)\,d\theta},
+      \qquad
+      \text{with } 
+      p(D \mid \theta) = \mathcal L(\theta)
+      \text{ (likelihood), } 
+      p(\theta)\text{ (prior).}
+\]
 
-1. **Bearings → Likelihood**  
-   For each landmark, the difference between the *observed* bearing and the *predicted* bearing is treated as a wrapped-normal error  
-   \\[
-     \Delta\theta \sim \mathcal N(0,\sigma^2)\quad\bmod 360^\circ
-   \\]
-
-2. **Loose prior**  
-   A uniform rectangle (plus a small margin) is drawn around all chosen landmarks.
-
-3. **Nested sampling with UltraNest**  
-   UltraNest explores the latitude-longitude space and returns equally-weighted samples from the posterior distribution.
-
-4. **Visualisation**  
-   The posterior samples are pushed into Folium as a heat layer; beacon markers and the maximum-a-posteriori (MAP) point are overlaid.
-
-> More landmarks or tighter compass accuracy → a smaller, sharper probability cloud.
+Sampling \(p(\theta|D)\) yields an **ensemble of solutions** instead of a single best-fit.  
+This repository uses **nested sampling** (via [UltraNest]) to produce those samples and, when helpful, renders them as heat-maps or kernel-density curves.
 
 ---
 
-## Quick-start
+## 2 · Projects in the repo (all “minimal-Viable”)  
+
+| Script | Inverse question | Likelihood \(\mathcal L(\theta)\) | Typical application(s) |
+|--------|------------------|------------------------------------|------------------------|
+| `bayesian_resection.py` | Where am **I**?  (unknown lat/lon from magnetic bearings) | Wrapped–normal on each bearing:<br/> \(\displaystyle \log\mathcal L = -\tfrac12\sum_i\bigl(\tfrac{\Delta\theta_i}{\sigma}\bigr)^2\) | Search-and-rescue fixes, emergency land nav, quick survey checks |
+| `advection_diffusion_inverse.py` | Where along the pipe did the pulse enter?  (1-D source position \(x_0\)) | Gaussian on concentrations:<br/> \(\displaystyle \log\mathcal L = -\tfrac{1}{2\sigma^2}\sum_i (u_\text{obs}-u_\text{pred})^2\) | River-spill forensics, groundwater tracers, industrial leak localisation |
+| `tdoa_geolocation.py` | Where is the sound source?  (lat/lon from TDOA matrix at 4 mics) | Frobenius norm on residual delay matrix:<br/> \(\displaystyle \log\mathcal L = -\tfrac{1}{2\sigma_t^{2}}\lVert D_\text{obs}-D_\text{pred}\rVert_F^{2}\) | Urban gunshot detection, wildlife bioacoustics, machinery knock diagnostics |
+
+> **Status:** All three are *skeletons*. They run end-to-end with synthetic data but lack nice I/O, error handling, and in-depth documentation. Pull requests welcome!
+
+---
+
+## 3 · Quick install & run
 
 ```bash
-pip install numpy scipy ultranest geographiclib folium
+git clone https://github.com/your-handle/ultranest-inverse-demos.git
+cd ultranest-inverse-demos
+python -m venv .venv && source .venv/bin/activate   # optional
+pip install numpy scipy ultranest geographiclib folium matplotlib seaborn
+
+# edit beacon coordinates & your compass bearings near the top
 python bayesian_resection.py
+# → opens  http://localhost:8000/observer_heatmap.html  with posterior heat-map
 
-# Landmarks (lat, lon) in decimal degrees
-beacons = np.array([
-    [lat1, lon1],  # Landmark A
-    [lat2, lon2],  # Landmark B
-    ...
-])
+python advection_diffusion_inverse.py
+# → GUI window: move “Injection Site x₀” slider, enter three (x,t) pairs
+#   click  Save → Run P(x₀|D) → Show P(x₀|D)
 
-# Your measured bearings (degrees), same order as 'beacons'
-theta_data = np.array([bearingA, bearingB, ...])
-
-sigma = 10.0  # Compass 1-σ noise
-
+# (optional) replace MIC_POS and D_obs with your own array & delay matrix
+python tdoa_geolocation.py
+# → opens  http://localhost:8010/tdoa_heatmap.html  with posterior heat-map
 
