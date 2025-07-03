@@ -56,7 +56,7 @@ def bearing(lat_lon, beacons):
 sigma = 10.0  # Compass noise in degrees.
 theta_true = bearing(x_gt, beacons_trunc)
 # For testing, use the measured bearings from your chosen compass:
-theta_data = np.array([115, 60])
+theta_data = np.array([115, 60]) # your heading azimuths corresponding to beacons go here; make sure the order is the same for azimuths to beacons and the actual beacons
 theta_data = np.mod(theta_data, 360)
 print("Observed bearings (°):", np.round(theta_data, 2), "\n")
 
