@@ -28,16 +28,16 @@ plot_map_loc  = True    # Plot the maximum a posteriori (MAP) location.
 
 # 1. Beacon positions in decimal degrees (lat, lon)
 beacons = np.array([
-    [32.401561, -100.714005],  # Wolf stadium
-    [32.412594, -100.713310],  # Munoz trucking
-    [32.40361,  -100.71279],   # Water tower
-    [32.41195,  -100.71327],   # Radio tower
+    [, ],  # Trig Beacon 1
+    [, ],  # TB 2
+    [, ],   # ...
+    [, ],   # etc
 ])
 # Select which beacons to use (by index)
 beacons_trunc = beacons[[2, 3], :]  # currently using the water tower & radio tower
 
 # 2. True observer location (for simulation/testing)
-x_gt = np.array([32.408577, -100.721543])  # Mrs G’s
+x_gt = np.array([, ])  # 
 
 # 3. Geodesic bearing function (observer → beacon)
 geod = Geodesic.WGS84
@@ -55,7 +55,7 @@ def bearing(lat_lon, beacons):
 # 4. Simulate noisy compass readings (observer‐relative bearings)
 sigma = 10.0  # Compass noise in degrees.
 theta_true = bearing(x_gt, beacons_trunc)
-# For testing, use the measured bearings from your military compass:
+# For testing, use the measured bearings from your chosen compass:
 theta_data = np.array([115, 60])
 theta_data = np.mod(theta_data, 360)
 print("Observed bearings (°):", np.round(theta_data, 2), "\n")
