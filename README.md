@@ -27,7 +27,7 @@ p(\theta \mid D)
 \]
 
 Sampling \(p(\theta|D)\) yields an **ensemble of solutions** instead of a single best-fit.  
-This repository uses **nested sampling** (via [UltraNest]) to produce those samples and, when helpful, renders them as heat-maps or kernel-density curves.
+This repository uses **nested sampling** (via [UltraNest]) to produce those samples and, when helpful, renders them as heat-maps or kernel-density surfaces.
 
 ---
 
