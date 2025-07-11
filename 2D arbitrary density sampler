@@ -1,0 +1,104 @@
+import numpy as np
+import ultranest as un
+import matplotlib.pyplot as plt
+import scipy.stats as st
+from numpy import exp, log, cos, pi
+
+"""2D squared Fourier cosine series demo energy function
+
+V(x,y) = 100 [Σ_{k=1..m} Σ_{l=1..n} c_{kl} cos(kπx) cos(lπy)]^2
+φ(x,y) = exp(-V)
+logL = lnφ = -V
+
+Coefficients c_{kl} ~ N(0, 1/(kl)). sampled so that higher energies are attenuated for smoothness
+"""
+
+# -----------------------------------------------------------------------------
+# Global parameters -----------------------------------------------------------
+m, n = 10, 10               # highest cosine indices in x and y
+np.random.seed(42)
+N_GRID = 128                 # plot grid resolution
+
+# -----------------------------------------------------------------------------
+# Sample Fourier coefficients --------------------------------------------------
+ks = np.arange(1, m + 1)[:, None]      # shape (m,1)
+ls = np.arange(1, n + 1)[None, :]      # shape (1,n)
+std = 1.0 / (ks * ls)                  # σ_{kl} = 1/(k l)
+C = np.random.normal(scale=std)       # shape (m,n)
+
+# -----------------------------------------------------------------------------
+# Pre‑compute cosines on a fine grid -----------------------------------------
+xg = np.linspace(0, 1, N_GRID)
+yg = np.linspace(0, 1, N_GRID)
+cosx = np.cos(pi * ks * xg)             # (m, N_GRID)
+cosy = np.cos(pi * ls.T * yg)             # (n, N_GRID)
+
+# V(x,y) on grid: V = 100 (cosxᵀ C cosy) ^ 2 -------------------------------------------
+V_grid =  100 * (cosx.T @ C @ cosy)**2           # (N_GRID, N_GRID)
+Φ_grid = exp(-V_grid)                  # φ = e^{−V}
+
+plt.imshow(Φ_grid)
+plt.show()
+# -----------------------------------------------------------------------------
+# φ(x,y) callable and potential V(x,y) ----------------------------------------
+
+def V(point):
+    x, y = point
+    cx = np.cos(pi * ks.flatten() * x)   # (m,)
+    cy = np.cos(pi * ls.flatten() * y)   # (n,)
+    return 100 * (cx @ C @ cy)**2
+
+# -----------------------------------------------------------------------------
+# UltraNest setup -------------------------------------------------------------
+lo, hi = 0.0, 1.0
+
+
+def PriorTransform(cube):
+    return lo + (hi - lo) * cube
+
+
+def LogLikelihood(params):
+    return -V(params)  # log L = ln φ = −V
+
+
+sampler = un.ReactiveNestedSampler(
+    ["X", "Y"], LogLikelihood, PriorTransform, log_dir=".", resume="overwrite")
+
+results = sampler.run(min_num_live_points=1000, frac_remain=0.999)
+sampler.print_results()
+
+# -----------------------------------------------------------------------------
+# KDE of samples --------------------------------------------------------------
+particles = results["samples"]
+kde = st.gaussian_kde(particles.T, bw_method=0.1)
+Xg, Yg = np.meshgrid(xg, yg)
+P_kde = kde(np.vstack([Xg.ravel(), Yg.ravel()])).reshape(N_GRID, N_GRID)
+
+# -----------------------------------------------------------------------------
+# Evidence and normalised density --------------------------------------------
+Z = exp(results["logz"])
+P_grid = Φ_grid / Z
+
+# -----------------------------------------------------------------------------
+# Plot comparison -------------------------------------------------------------
+cmap = "viridis"
+vmin = min(P_grid.min(), P_kde.min())
+vmax = max(P_grid.max(), P_kde.max())
+
+fig, ax = plt.subplots(1, 2, figsize=(12, 5), sharex=True, sharey=True)
+ax[0].imshow(P_grid.T, origin="lower", extent=[0, 1, 0, 1], cmap=cmap,
+             vmin=vmin, vmax=vmax)
+ax[0].set_title(r"Target density $e^{-V}/Z$")
+ax[0].set_xlabel("x")
+ax[0].set_ylabel("y")
+
+ax[1].imshow(P_kde, origin="lower", extent=[0, 1, 0, 1], cmap=cmap,
+             vmin=vmin, vmax=vmax)
+ax[1].set_title("KDE of UltraNest samples")
+ax[1].set_xlabel("x")
+ax[1].set_ylabel("y")
+
+fig.tight_layout()
+plt.show()
+
+print("Z =", Z)
